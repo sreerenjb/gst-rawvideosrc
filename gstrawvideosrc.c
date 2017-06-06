@@ -261,7 +261,7 @@ gst_raw_video_src_set_raw_location (GstRawVideoSrc * src,
     GST_INFO ("filename : %s", src->raw_filename);
     GST_INFO ("uri      : %s", src->raw_uri);
   }
-  g_object_notify (G_OBJECT (src), "yuv_location");
+  g_object_notify (G_OBJECT (src), "location");
   /* FIXME 2.0: notify "uri" property once there is one */
 
   return TRUE;
