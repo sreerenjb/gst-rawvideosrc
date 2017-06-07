@@ -418,35 +418,27 @@ gst_raw_video_src_fill (GstPushSrc * basesrc, GstBuffer * buf)
   guint y_stride;
   guint uv_stride;
   GstVideoFrame frame;
-  int i;
+  int i, plane, n_planes;
   src = GST_RAW_VIDEO_SRC_CAST (basesrc);
 
   if (!gst_video_frame_map (&frame, &src->info, buf, GST_MAP_WRITE))
     goto buffer_write_fail;
 
-  // todo: only for NV12 input format
-  y_width = GST_VIDEO_FRAME_WIDTH (&frame);
-  uv_width = GST_VIDEO_FRAME_WIDTH (&frame);
-  y_stride = GST_VIDEO_FRAME_PLANE_STRIDE (&frame, 0);
-  uv_stride = GST_VIDEO_FRAME_PLANE_STRIDE (&frame, 1);
-  data_y = GST_VIDEO_FRAME_PLANE_DATA (&frame, 0);
-  data_uv = GST_VIDEO_FRAME_PLANE_DATA (&frame, 1);
+  n_planes = GST_VIDEO_FRAME_N_PLANES (&frame);
 
-  if (GST_VIDEO_FRAME_FORMAT (&frame) == GST_VIDEO_FORMAT_NV12) {
-    for (i = 0; i < GST_VIDEO_FRAME_HEIGHT (&frame); i++) {
-      ret = read (src->raw_fd, data_y, y_width);
-      if (ret < y_width)
-        goto eos;
-      data_y += y_stride;
-    }
-    for (i = 0; i < GST_VIDEO_FRAME_HEIGHT (&frame) / 2; i++) {
-      ret = read (src->raw_fd, data_uv, uv_width);
-      if (ret < uv_width)
-        goto eos;
-      data_uv += uv_stride;
-    }
-  } else {
-    goto format_err;
+  for (plane = 0; plane < n_planes; plane++) {
+      gpointer pd = GST_VIDEO_FRAME_PLANE_DATA (&frame, plane);
+
+      gint w = GST_VIDEO_FRAME_COMP_WIDTH (&frame, plane)
+          * GST_VIDEO_FRAME_COMP_PSTRIDE (&frame, plane);
+      gint h = GST_VIDEO_FRAME_COMP_HEIGHT (&frame, plane);
+      gint ps = GST_VIDEO_FRAME_PLANE_STRIDE (&frame, plane);
+      for (i = 0; i<h; i++) {
+          ret = read (src->raw_fd, pd, w);
+          if (ret < w)
+             goto eos;
+          pd += ps;
+      }
   }
   gst_video_frame_unmap (&frame);
 
